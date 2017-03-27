@@ -71,7 +71,7 @@ def tinyMazeSearch(problem):
     return [s, s, w, s, w, w, s, w]
 
 
-def depthFirstSearch(problem):
+def depthFirstSearch(problem, discovered = [], path = [], position = None):
     """
     Search the deepest nodes in the search tree first
     [2nd Edition: p 75, 3rd Edition: p 87]
@@ -87,66 +87,68 @@ def depthFirstSearch(problem):
     print "Is the start a goal?", problem.isGoalState(problem.getStartState())
     print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
-    "*** YOUR CODE HERE ***"
-    from game import Directions
-    moves=[]
 
-    print "Start:", problem.getStartState()
-    print "Is the start a goal?", problem.isGoalState(problem.getStartState())
-    print "Start's successors:", problem.getSuccessors(problem.getStartState())
-
-    a = DFS(problem)
-    a.execute(problem.getStartState())
+    if position is None:
+        position = problem.getStartState()
 
 
-    #
-    # moves.append(Directions.SOUTH)
-    # moves.append(Directions.SOUTH)
-    # moves.append(Directions.WEST)
-    # moves.append(Directions.SOUTH)
-    # moves.append(Directions.WEST)
-    # moves.append(Directions.WEST)
-    # moves.append(Directions.SOUTH)
-    # moves.append(Directions.WEST)
+    if position not in discovered:
+        discovered.append(position)
 
-    a.path.reverse()
-    moves = a.path
+        #getting the new frontier
+        frontier = problem.getSuccessors(position)
 
-    return moves
+        # begin IMPLEMENTATION WITH STACK
+        stack = util.Stack()
+        for next_position in frontier:
+            stack.push(next_position)
 
+        while (not stack.isEmpty()):
+            next_position = stack.pop()
+        # finish IMPLEMENTATION WITH STACK
 
-class DFS:
-
-
-    def __init__(self, problem):
-        self.discovered = []
-        self.frontier = util.Stack()
-        self.current_problem = problem
-        self.path = []
-        self.found = False
+        # begin MY IMPPLEMENTATION
+        #for next_position in frontier:
+        # finish MY IMPPLEMENTATION
 
 
+            if problem.isGoalState(next_position[0]): #check if I finally arrive to Goal
+                path.append(next_position)
 
-    def execute(self,position):
-        if position not in self.discovered:
-            self.discovered.append(position)
+            else:
+                path.append(next_position)
+                depthFirstSearch(problem,discovered,path,next_position[0])
 
-            frontier = self.current_problem.getSuccessors(position)
+                if problem.isGoalState(path[len(path)-1][0]):
+                    if(position == problem.getStartState()):
+                        moves =[]
+                        for move in path:
+                            moves.append(move[1])
+                        return moves
 
-
-            for next_position in frontier:
-                if self.current_problem.isGoalState(next_position[0]):
-                    self.path.append(next_position[1])
-                    self.found = True
-                    return True
                 else:
-                    if self.execute(next_position[0]):
-                        self.path.append(next_position[1])
-                        return True
+                    path.pop()
 
-        return False
+    return path
 
 
+class Node():
+
+    def __init__(self,state, cost=0):
+        self.state = state
+        self.parent = None
+        self.children = []
+        self.action = None
+        self.cost = cost
+
+    def setChild(self, state, action, cost = 0):
+        child = Node(state)
+        child.action =action
+        child.cost = cost
+        child.parent = self
+        self.children.append(child)
+
+        return child
 
 
 
@@ -156,14 +158,116 @@ def breadthFirstSearch(problem):
     Search the shallowest nodes in the search tree first.
     [2nd Edition: p 73, 3rd Edition: p 82]
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    node = Node( problem.getStartState() )
+    frontier = util.Queue()
+    frontier.push(node)
+
+    discovered = []
+
+    while True:
+        if frontier.isEmpty():
+            return None
+        node = frontier.pop()
+        discovered.append(node)
+
+        successors = problem.getSuccessors(node.state)
+
+        for successor in successors:
+            child = node.setChild(successor[0],successor[1])
+
+            # check if it's already on frontier
+            inFrontier = False
+            for f in frontier.list:
+                if f.state == child.state:
+                    inFrontier = True
+
+            # check if it's already on discovered
+            inDiscovered = False
+            for d in discovered:
+                if d.state == child.state:
+                    inDiscovered = True
+
+            if inFrontier == False and inDiscovered ==False:
+                # check if this is teh goal
+                if problem.isGoalState(child.state):
+                    #making the final transformation
+                    moves=getActionsToChild(child)
+                    return moves
+                # child is no frontier nor discovered so it's a new frontier
+                frontier.push(child)
+
+def getActionsToChild(node):
+    actions=[]
+    while node.parent != None:
+        actions.append(node.action)
+        node = node.parent
+    actions.reverse()
+    return actions
+
 
 
 def uniformCostSearch(problem):
     "Search the node of least total cost first. "
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    node = Node( problem.getStartState() )
+    frontier = util.PriorityQueue()
+    frontier.push(node,999999)
+
+    discovered = []
+
+    while True:
+        if frontier.isEmpty():
+            return None
+
+        node = frontier.pop()
+
+        moves = getActionsToChild(node)
+
+        if problem.isGoalState(node.state):
+            # making the final transformation
+            return moves
+
+        # add node as been discovered
+        discovered.append(node)
+
+        successors = problem.getSuccessors(node.state)
+
+        for successor in successors:
+
+            child = node.setChild(successor[0], successor[1])
+
+            moves = getActionsToChild(child)
+
+            child.cost = problem.getCostOfActions(moves)
+
+            # check if it's already on frontier
+            inFrontier = False
+
+            n = -1
+            for f in frontier.heap:
+                n += 1
+                if f[1].state == child.state:
+                    #is already in the frontier
+                    inFrontier = True
+
+                    if child.cost < f[1].cost:
+                        #this is a better way to get there
+                        frontier.heap.pop(n)
+                        frontier.push(child, child.cost)
+                        break
+
+
+
+            # check if it's already on discovered
+            inDiscovered = False
+            for d in discovered:
+                if d.state == child.state:
+                    inDiscovered = True
+
+            if inFrontier == False and inDiscovered == False:
+                frontier.push(child,child.cost)
+
+
+
 
 
 def nullHeuristic(state, problem=None):
@@ -176,8 +280,67 @@ def nullHeuristic(state, problem=None):
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     "Search the node that has the lowest combined cost and heuristic first."
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    node = Node( problem.getStartState() )
+    frontier = util.PriorityQueue()
+    frontier.push(node,999999)
+
+    discovered = []
+
+    while True:
+        if frontier.isEmpty():
+            return None
+
+        node = frontier.pop()
+
+        moves = getActionsToChild(node)
+
+        if problem.isGoalState(node.state):
+            # making the final transformation
+            return moves
+
+        # add node as been discovered
+        discovered.append(node)
+
+        successors = problem.getSuccessors(node.state)
+
+        for successor in successors:
+
+            child = node.setChild(successor[0], successor[1])
+
+            moves = getActionsToChild(child)
+
+            #child.cost = problem.getCostOfActions(moves)
+            g_n = problem.getCostOfActions(moves)
+            h_n = heuristic(child.state,problem)
+            f_n = g_n+h_n
+            child.cost = f_n
+
+            # check if it's already on frontier
+            inFrontier = False
+
+            n = -1
+            for f in frontier.heap:
+                n += 1
+                if f[1].state == child.state:
+                    #is already in the frontier
+                    inFrontier = True
+
+                    if child.cost < f[1].cost:
+                        #this is a better way to get there
+                        frontier.heap.pop(n)
+                        frontier.push(child, child.cost)
+                        break
+
+
+
+            # check if it's already on discovered
+            inDiscovered = False
+            for d in discovered:
+                if d.state == child.state:
+                    inDiscovered = True
+
+            if inFrontier == False and inDiscovered == False:
+                frontier.push(child,child.cost)
 
 
 # Abbreviations
